@@ -1,0 +1,17 @@
+{
+  "name": "feyorra-erc20-bridge",
+  "scripts": {
+    "test": "hardhat test",
+    "build": "hardhat compile"
+  },
+  "volta": {
+    "node": "20.15.0"
+  },
+  "dependencies": {
+    "hardhat": "^2.22.13"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}
