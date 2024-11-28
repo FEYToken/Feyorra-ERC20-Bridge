@@ -34,7 +34,7 @@ library Client {
 
     function _argsToBytes(
         EVMExtraArgsV1 memory extraArgs
-    ) internal pure returns (bytes memory bts) {
+    ) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(EVM_EXTRA_ARGS_V1_TAG, extraArgs);
     }
 }
