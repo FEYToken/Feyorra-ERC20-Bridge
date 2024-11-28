@@ -71,7 +71,7 @@ abstract contract Ownable {
      * NOTE: Renouncing ownership will leave the contract without an owner,
      * thereby disabling any functionality that is only available to the owner.
      */
-    function renounceOwnership() public onlyOwner {
+    function renounceOwnership() public virtual onlyOwner {
         _transferOwnership(address(0x0));
     }
 

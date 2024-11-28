@@ -6,13 +6,11 @@ import {Client} from "./CCIP/Client.sol";
 import {CCIPReceiver} from "./CCIP/CCIPReceiver.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {IERC20} from "./IERC20.sol";
-import {Ownable} from "./Ownable.sol";
 import {Pausable} from "./Pausable.sol";
 import {RandomBytes32Generator} from "./RandomBytes32Generator.sol";
 
 contract FeyorraBridge is
     CCIPReceiver,
-    Ownable,
     Pausable,
     RandomBytes32Generator
 {

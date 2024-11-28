@@ -116,4 +116,8 @@ abstract contract Pausable is Ownable {
         _paused = false;
         emit Unpaused(msg.sender);
     }
+
+    function renounceOwnership() public override whenNotPaused {
+        Ownable.renounceOwnership();
+    }
 }
