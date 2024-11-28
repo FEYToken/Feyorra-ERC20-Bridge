@@ -206,7 +206,7 @@ contract FeyorraBridge is
         checkCustomChainSelector(_destinationChainSelector, true)
         returns (bytes32 requestId)
     {
-        require(_receiverBridge.length > 0);
+        require(_receiverBridge.length > 0, "Invalid receiver bridge");
 
         uint256 fees = customChains[_destinationChainSelector].fees;
 
@@ -338,6 +338,6 @@ contract FeyorraBridge is
         }
 
         (bool success, ) = payable(_beneficiary).call{value: amount}("");
-        require(success);
+        require(success, "Transfer failed");
     }
 }
