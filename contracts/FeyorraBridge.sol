@@ -129,13 +129,13 @@ contract FeyorraBridge is
         address _receiverBridge,
         uint256 _amount,
         address _recipient,
-        uint256 _gasLimit
+        bytes memory _ccipExtraArgs
     ) external view returns (uint256) {
         Client.EVM2AnyMessage memory evm2AnyMessage = buildCCIPMessage(
             _receiverBridge,
             TokenAmount({amount: _amount, recipient: _recipient}),
             address(0x0),
-            _gasLimit
+            _ccipExtraArgs
         );
 
         IRouterClient router = IRouterClient(getRouter());
@@ -148,7 +148,7 @@ contract FeyorraBridge is
         address _receiverBridge,
         uint256 _amount,
         address _recipient,
-        uint256 _gasLimit
+        bytes memory _ccipExtraArgs
     )
         external
         payable
@@ -162,7 +162,7 @@ contract FeyorraBridge is
             _receiverBridge,
             TokenAmount({amount: _amount, recipient: _recipient}),
             address(0),
-            _gasLimit
+            _ccipExtraArgs
         );
 
         IRouterClient router = IRouterClient(getRouter());
@@ -307,16 +307,14 @@ contract FeyorraBridge is
         address _receiverBridge,
         TokenAmount memory _tokenAmount,
         address _feeTokenAddress,
-        uint256 _gasLimit
+        bytes memory _ccipExtraArgs
     ) private pure returns (Client.EVM2AnyMessage memory) {
         return
             Client.EVM2AnyMessage({
                 receiver: abi.encode(_receiverBridge),
                 data: abi.encode(_tokenAmount),
                 tokenAmounts: new Client.EVMTokenAmount[](0),
-                extraArgs: Client._argsToBytes(
-                    Client.EVMExtraArgsV1({gasLimit: _gasLimit})
-                ),
+                extraArgs: _ccipExtraArgs,
                 feeToken: _feeTokenAddress
             });
     }
