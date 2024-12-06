@@ -8,11 +8,13 @@ import {SafeERC20} from "./SafeERC20.sol";
 import {IERC20} from "./IERC20.sol";
 import {Pausable} from "./Pausable.sol";
 import {RandomBytes32Generator} from "./RandomBytes32Generator.sol";
+import {UniqueRequestIdGuard} from "./UniqueRequestIdGuard.sol";
 
 contract FeyorraBridge is
     CCIPReceiver,
     Pausable,
-    RandomBytes32Generator
+    RandomBytes32Generator,
+    UniqueRequestIdGuard
 {
     using SafeERC20 for IERC20;
 
@@ -270,6 +272,7 @@ contract FeyorraBridge is
         external
         whenNotPaused
         onlyOwner
+        onlyNotProcessedRequestId(_requestId)
         checkCustomChainSelector(_sourceChainSelector, true)
     {
         executeBridgeTransfer(
