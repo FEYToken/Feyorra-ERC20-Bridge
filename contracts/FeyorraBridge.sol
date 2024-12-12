@@ -7,13 +7,13 @@ import {CCIPReceiver} from "./CCIP/CCIPReceiver.sol";
 import {SafeERC20} from "./SafeERC20.sol";
 import {IERC20} from "./IERC20.sol";
 import {Pausable} from "./Pausable.sol";
-import {RandomBytes32Generator} from "./RandomBytes32Generator.sol";
+import {RequestIdGenerator} from "./RequestIdGenerator.sol";
 import {UniqueRequestIdGuard} from "./UniqueRequestIdGuard.sol";
 
 contract FeyorraBridge is
     CCIPReceiver,
     Pausable,
-    RandomBytes32Generator,
+    RequestIdGenerator,
     UniqueRequestIdGuard
 {
     using SafeERC20 for IERC20;
@@ -193,6 +193,19 @@ contract FeyorraBridge is
         excessIfNeeded(fees);
     }
 
+    function excessIfNeeded(uint256 fees) private {
+        if (msg.value > fees) {
+            uint256 refundAmount = msg.value - fees;
+
+            (bool isRefundSuccess, ) = payable(msg.sender).call{
+                value: refundAmount
+            }("");
+            if (isRefundSuccess) {
+                emit RefundExcessFee(msg.sender, refundAmount);
+            }
+        }
+    }
+
     function transferFeyorraRequest(
         uint64 _destinationChainSelector,
         bytes calldata _receiverBridge,
@@ -204,7 +217,7 @@ contract FeyorraBridge is
         whenNotPaused
         onlyAllowlistedDestinationChain(_destinationChainSelector)
         checkCustomChainSelector(_destinationChainSelector, true)
-        returns (bytes32 requestId)
+        returns (bytes32)
     {
         require(_receiverBridge.length > 0, "Invalid receiver bridge");
 
@@ -215,7 +228,13 @@ contract FeyorraBridge is
         }
 
         IERC20(feyToken).safeTransferFrom(msg.sender, address(this), _amount);
-        requestId = generateRandomBytes32();
+
+        (bytes32 requestId, ) = getRequestId(
+            _destinationChainSelector,
+            _amount,
+            _receiverBridge,
+            _recipient
+        );
 
         emit TransferFeyorraRequest(
             requestId,
@@ -228,19 +247,8 @@ contract FeyorraBridge is
         );
 
         excessIfNeeded(fees);
-    }
 
-    function excessIfNeeded(uint256 fees) private {
-        if (msg.value > fees) {
-            uint256 refundAmount = msg.value - fees;
-
-            (bool isRefundSuccess, ) = payable(msg.sender).call{
-                value: refundAmount
-            }("");
-            if (isRefundSuccess) {
-                emit RefundExcessFee(msg.sender, refundAmount);
-            }
-        }
+        return requestId;
     }
 
     function _ccipReceive(
