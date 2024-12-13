@@ -46,6 +46,17 @@ contract FeyorraBridge is
         uint256 fees
     );
 
+    event CustomTransferFeyorraRequest(
+        bytes32 indexed requestId,
+        uint64 indexed destinationChainSelector,
+        address indexed spender,
+        bytes receiverBridge,
+        uint256 amount,
+        bytes recipient,
+        uint256 fees,
+        uint256 nonce
+    );
+
     event ExecuteBridgeTransfer(
         bytes32 indexed requestId,
         uint64 indexed sourceChainSelector,
@@ -229,21 +240,22 @@ contract FeyorraBridge is
 
         IERC20(feyToken).safeTransferFrom(msg.sender, address(this), _amount);
 
-        (bytes32 requestId, ) = getRequestId(
+        (bytes32 requestId, uint256 nonce) = getRequestId(
             _destinationChainSelector,
             _amount,
             _receiverBridge,
             _recipient
         );
 
-        emit TransferFeyorraRequest(
+        emit CustomTransferFeyorraRequest(
             requestId,
             _destinationChainSelector,
             msg.sender,
             _receiverBridge,
             _amount,
             _recipient,
-            fees
+            fees,
+            nonce
         );
 
         excessIfNeeded(fees);
