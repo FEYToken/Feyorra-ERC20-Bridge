@@ -9,12 +9,14 @@ import {IERC20} from "./IERC20.sol";
 import {Pausable} from "./Pausable.sol";
 import {RequestIdGenerator} from "./RequestIdGenerator.sol";
 import {UniqueRequestIdGuard} from "./UniqueRequestIdGuard.sol";
+import {SingleTokenRateLimiter} from "./RateLimit/SingleTokenRateLimiter.sol";
 
 contract FeyorraBridge is
     CCIPReceiver,
     Pausable,
     RequestIdGenerator,
-    UniqueRequestIdGuard
+    UniqueRequestIdGuard,
+    SingleTokenRateLimiter
 {
     using SafeERC20 for IERC20;
 
@@ -75,7 +77,19 @@ contract FeyorraBridge is
     error InvalidReceiverAddress();
     error CustomChainSelectorError(uint64 chainSelector);
 
-    constructor(address _router, address _feyToken) CCIPReceiver(_router) {
+    constructor(
+        address _router,
+        address _feyToken,
+        uint128 _tokenTransferCapacity,
+        uint128 _tokenTransferRate
+    )
+        CCIPReceiver(_router)
+        SingleTokenRateLimiter(
+            _feyToken,
+            _tokenTransferCapacity,
+            _tokenTransferRate
+        )
+    {
         feyToken = _feyToken;
     }
 
@@ -169,6 +183,8 @@ contract FeyorraBridge is
         checkCustomChainSelector(_destinationChainSelector, false)
         returns (bytes32 requestId)
     {
+        enforceTokenTransferLimit(_amount);
+
         Client.EVM2AnyMessage memory evm2AnyMessage = buildCCIPMessage(
             _receiverBridge,
             TokenAmount({amount: _amount, recipient: _recipient}),
@@ -231,6 +247,7 @@ contract FeyorraBridge is
         returns (bytes32)
     {
         require(_receiverBridge.length > 0, "Invalid receiver bridge");
+        enforceTokenTransferLimit(_amount);
 
         uint256 fees = customChains[_destinationChainSelector].fees;
 
@@ -337,6 +354,19 @@ contract FeyorraBridge is
                 extraArgs: _ccipExtraArgs,
                 feeToken: _feeTokenAddress
             });
+    }
+
+    function updateTokenTransferLimitConfig(
+        uint128 _tokenTransferCapacity,
+        uint128 _tokenTransferRate,
+        bool _isDisabled
+    ) public onlyOwner {
+        _updateTokenTransferLimitConfig(
+            feyToken,
+            _tokenTransferCapacity,
+            _tokenTransferRate,
+            _isDisabled
+        );
     }
 
     function withdrawToken(address _beneficiary) public onlyOwner {
