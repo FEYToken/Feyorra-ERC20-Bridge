@@ -105,7 +105,10 @@ contract FeyorraBridge is
         address _recipient,
         bytes memory _ccipExtraArgs
     ) external payable whenNotPaused returns (bytes32 requestId) {
-        require(_recipient != address(0x0), "Invalid recipient address");
+        require(
+            _recipient != address(0x0) && _amount > 0,
+            "Invalid recipient or amount"
+        );
 
         validateChain(
             _destinationChainSelector,
@@ -169,7 +172,10 @@ contract FeyorraBridge is
         uint256 _amount,
         bytes calldata _recipient
     ) external payable whenNotPaused returns (bytes32) {
-        require(_recipient.length > 0, "Invalid recipient address");
+        require(
+            _recipient.length > 0 && _amount > 0,
+            "Invalid recipient or amount"
+        );
 
         validateChain(
             _destinationChainSelector,
