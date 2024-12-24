@@ -33,9 +33,9 @@ contract FeyorraBridge is
         bytes32 indexed requestId,
         uint64 indexed destinationChainSelector,
         address indexed spender,
-        bytes receiverBridge,
+        address receiverBridge,
         uint256 amount,
-        bytes recipient,
+        address recipient,
         uint256 fees
     );
 
@@ -141,9 +141,9 @@ contract FeyorraBridge is
             requestId,
             _destinationChainSelector,
             msg.sender,
-            abi.encodePacked(_receiverBridge),
+            _receiverBridge,
             _amount,
-            abi.encodePacked(_recipient),
+            _recipient,
             fees
         );
 
