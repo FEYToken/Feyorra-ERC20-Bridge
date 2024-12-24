@@ -10,13 +10,15 @@ import {Pausable} from "./Pausable.sol";
 import {RequestIdGenerator} from "./RequestIdGenerator.sol";
 import {UniqueRequestIdGuard} from "./UniqueRequestIdGuard.sol";
 import {SingleTokenRateLimiter} from "./RateLimit/SingleTokenRateLimiter.sol";
+import {ChainManager} from "./ChainManager.sol";
 
 contract FeyorraBridge is
     CCIPReceiver,
     Pausable,
     RequestIdGenerator,
     UniqueRequestIdGuard,
-    SingleTokenRateLimiter
+    SingleTokenRateLimiter,
+    ChainManager
 {
     using SafeERC20 for IERC20;
 
@@ -25,18 +27,7 @@ contract FeyorraBridge is
         uint256 amount;
     }
 
-    struct CustomChain {
-        uint256 fees;
-        bool isCustom;
-    }
-
     address public immutable feyToken;
-
-    mapping(uint64 => CustomChain) public customChains;
-
-    mapping(uint64 => bool) public allowlistedDestinationChains;
-    mapping(uint64 => bool) public allowlistedSourceChains;
-    mapping(address => bool) public allowlistedSenders;
 
     event TransferFeyorraRequest(
         bytes32 indexed requestId,
@@ -55,7 +46,7 @@ contract FeyorraBridge is
         bytes receiverBridge,
         uint256 amount,
         bytes recipient,
-        uint256 fees,
+        uint88 fees,
         uint256 nonce
     );
 
@@ -71,11 +62,6 @@ contract FeyorraBridge is
 
     error NotEnoughFees(uint256 feesSent, uint256 requiredFees);
     error NothingToWithdraw();
-    error DestinationChainNotAllowlisted(uint64 destinationChainSelector);
-    error SourceChainNotAllowlisted(uint64 sourceChainSelector);
-    error SenderNotAllowlisted(address sender);
-    error InvalidReceiverAddress();
-    error CustomChainSelectorError(uint64 chainSelector);
 
     constructor(
         address _router,
@@ -91,62 +77,6 @@ contract FeyorraBridge is
         )
     {
         feyToken = _feyToken;
-    }
-
-    modifier onlyAllowlistedDestinationChain(uint64 _destinationChainSelector) {
-        if (!allowlistedDestinationChains[_destinationChainSelector])
-            revert DestinationChainNotAllowlisted(_destinationChainSelector);
-        _;
-    }
-
-    modifier onlyAllowlistedSource(
-        uint64 _sourceChainSelector,
-        address _sender
-    ) {
-        if (!allowlistedSourceChains[_sourceChainSelector])
-            revert SourceChainNotAllowlisted(_sourceChainSelector);
-        if (!allowlistedSenders[_sender]) revert SenderNotAllowlisted(_sender);
-        _;
-    }
-
-    modifier validateReceiver(address _receiver) {
-        if (_receiver == address(0)) revert InvalidReceiverAddress();
-        _;
-    }
-
-    modifier checkCustomChainSelector(uint64 _chainSelector, bool _isCustom) {
-        if (customChains[_chainSelector].isCustom != _isCustom)
-            revert CustomChainSelectorError(_chainSelector);
-        _;
-    }
-
-    function updateCustomChain(
-        uint64 _chainSelector,
-        uint256 _fees,
-        bool _isCustom
-    ) external onlyOwner {
-        customChains[_chainSelector] = CustomChain({
-            fees: _fees,
-            isCustom: _isCustom
-        });
-    }
-
-    function allowlistDestinationChain(
-        uint64 _destinationChainSelector,
-        bool allowed
-    ) external onlyOwner {
-        allowlistedDestinationChains[_destinationChainSelector] = allowed;
-    }
-
-    function allowlistSourceChain(
-        uint64 _sourceChainSelector,
-        bool allowed
-    ) external onlyOwner {
-        allowlistedSourceChains[_sourceChainSelector] = allowed;
-    }
-
-    function allowlistSender(address _sender, bool allowed) external onlyOwner {
-        allowlistedSenders[_sender] = allowed;
     }
 
     function estimateFee(
@@ -174,15 +104,15 @@ contract FeyorraBridge is
         uint256 _amount,
         address _recipient,
         bytes memory _ccipExtraArgs
-    )
-        external
-        payable
-        whenNotPaused
-        onlyAllowlistedDestinationChain(_destinationChainSelector)
-        validateReceiver(_receiverBridge)
-        checkCustomChainSelector(_destinationChainSelector, false)
-        returns (bytes32 requestId)
-    {
+    ) external payable whenNotPaused returns (bytes32 requestId) {
+        require(_recipient != address(0x0), "Invalid recipient address");
+
+        validateChain(
+            _destinationChainSelector,
+            ripemd160(abi.encode(_receiverBridge)),
+            false,
+            false
+        );
         enforceTokenTransferLimit(_amount);
 
         Client.EVM2AnyMessage memory evm2AnyMessage = buildCCIPMessage(
@@ -238,19 +168,18 @@ contract FeyorraBridge is
         bytes calldata _receiverBridge,
         uint256 _amount,
         bytes calldata _recipient
-    )
-        external
-        payable
-        whenNotPaused
-        onlyAllowlistedDestinationChain(_destinationChainSelector)
-        checkCustomChainSelector(_destinationChainSelector, true)
-        returns (bytes32)
-    {
-        require(_receiverBridge.length > 0, "Invalid receiver bridge");
+    ) external payable whenNotPaused returns (bytes32) {
+        require(_recipient.length > 0, "Invalid recipient address");
+
+        validateChain(
+            _destinationChainSelector,
+            ripemd160(_receiverBridge),
+            false,
+            true
+        );
         enforceTokenTransferLimit(_amount);
 
-        uint256 fees = customChains[_destinationChainSelector].fees;
-
+        uint88 fees = chains[_destinationChainSelector].fees;
         if (fees > msg.value) {
             revert NotEnoughFees(msg.value, fees);
         }
@@ -282,15 +211,14 @@ contract FeyorraBridge is
 
     function _ccipReceive(
         Client.Any2EVMMessage memory _any2EvmMessage
-    )
-        internal
-        override
-        whenNotPaused
-        onlyAllowlistedSource(
+    ) internal override whenNotPaused {
+        validateChain(
             _any2EvmMessage.sourceChainSelector,
-            abi.decode(_any2EvmMessage.sender, (address))
-        )
-    {
+            ripemd160(_any2EvmMessage.sender),
+            true,
+            false
+        );
+
         executeBridgeTransfer(
             _any2EvmMessage.messageId,
             _any2EvmMessage.sourceChainSelector,
@@ -305,13 +233,14 @@ contract FeyorraBridge is
         bytes calldata _senderBridge,
         uint256 _amount,
         address _recipient
-    )
-        external
-        whenNotPaused
-        onlyOwner
-        onlyNotProcessedRequestId(_requestId)
-        checkCustomChainSelector(_sourceChainSelector, true)
-    {
+    ) external whenNotPaused onlyOwner onlyNotProcessedRequestId(_requestId) {
+        validateChain(
+            _sourceChainSelector,
+            ripemd160(_senderBridge),
+            true,
+            true
+        );
+
         executeBridgeTransfer(
             _requestId,
             _sourceChainSelector,
