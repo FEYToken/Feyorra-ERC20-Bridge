@@ -15,7 +15,7 @@ abstract contract ChainManager is Pausable {
 
     function deleteChain(
         uint64 _chainSelector
-    ) external whenNotPaused onlyOwner {
+    ) external whenNotPaused onlyOwner(false) {
         delete chains[_chainSelector];
     }
 
@@ -26,7 +26,7 @@ abstract contract ChainManager is Pausable {
         bool _isSource,
         bool _isDestination,
         bool _isCustom
-    ) external whenNotPaused onlyOwner {
+    ) external whenNotPaused onlyOwner(false) {
         uint8 flags = 0;
 
         flags = setFlag(flags, 0, _isSource);

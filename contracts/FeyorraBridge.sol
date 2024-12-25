@@ -11,6 +11,7 @@ import {RequestIdGenerator} from "./RequestIdGenerator.sol";
 import {UniqueRequestIdGuard} from "./UniqueRequestIdGuard.sol";
 import {SingleTokenRateLimiter} from "./RateLimit/SingleTokenRateLimiter.sol";
 import {ChainManager} from "./ChainManager.sol";
+import {OwnableWithTimeLockRole} from "./OwnableWithTimeLockRole.sol";
 
 contract FeyorraBridge is
     CCIPReceiver,
@@ -67,8 +68,11 @@ contract FeyorraBridge is
         address _router,
         address _feyToken,
         uint128 _tokenTransferCapacity,
-        uint128 _tokenTransferRate
+        uint128 _tokenTransferRate,
+        address _immediateOwner,
+        address _timeLockedOwner
     )
+        OwnableWithTimeLockRole(_immediateOwner, _timeLockedOwner)
         CCIPReceiver(_router)
         SingleTokenRateLimiter(
             _feyToken,
@@ -79,7 +83,7 @@ contract FeyorraBridge is
         feyToken = _feyToken;
     }
 
-    function setRouter(address _router) external onlyOwner {
+    function setRouter(address _router) external onlyOwner(true) {
         _setRouter(_router);
     }
 
@@ -243,7 +247,12 @@ contract FeyorraBridge is
         bytes calldata _senderBridge,
         uint256 _amount,
         address _recipient
-    ) external whenNotPaused onlyOwner onlyNotProcessedRequestId(_requestId) {
+    )
+        external
+        whenNotPaused
+        onlyOwner(false)
+        onlyNotProcessedRequestId(_requestId)
+    {
         validateChain(
             _sourceChainSelector,
             ripemd160(_senderBridge),
@@ -299,7 +308,7 @@ contract FeyorraBridge is
         uint128 _tokenTransferCapacity,
         uint128 _tokenTransferRate,
         bool _isDisabled
-    ) public onlyOwner {
+    ) public onlyOwner(true) {
         _updateTokenTransferLimitConfig(
             feyToken,
             _tokenTransferCapacity,
@@ -308,7 +317,7 @@ contract FeyorraBridge is
         );
     }
 
-    function withdrawToken(address _beneficiary) public onlyOwner {
+    function withdrawToken(address _beneficiary) public onlyOwner(true) {
         uint256 amount = IERC20(feyToken).balanceOf(address(this));
 
         if (amount == 0) {
@@ -318,7 +327,7 @@ contract FeyorraBridge is
         IERC20(feyToken).safeTransfer(_beneficiary, amount);
     }
 
-    function withdrawNative(address _beneficiary) public onlyOwner {
+    function withdrawNative(address _beneficiary) public onlyOwner(true) {
         uint256 amount = address(this).balance;
 
         if (amount == 0) {

@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.24;
 
-import {Ownable} from "./Ownable.sol";
+import {OwnableWithTimeLockRole} from "./OwnableWithTimeLockRole.sol";
 
 /**
  * @dev Contract module which allows children to implement an emergency stop
@@ -14,7 +14,7 @@ import {Ownable} from "./Ownable.sol";
  * the functions of your contract. Note that they will not be pausable by
  * simply including this module, only once the modifiers are put in place.
  */
-abstract contract Pausable is Ownable {
+abstract contract Pausable is OwnableWithTimeLockRole {
     bool private _paused;
 
     /**
@@ -36,13 +36,6 @@ abstract contract Pausable is Ownable {
      * @dev The operation failed because the contract is not paused.
      */
     error ExpectedPause();
-
-    /**
-     * @dev Initializes the contract in unpaused state.
-     */
-    constructor() {
-        _paused = false;
-    }
 
     /**
      * @dev Modifier to make a function callable only when the contract is not paused.
@@ -100,7 +93,7 @@ abstract contract Pausable is Ownable {
      *
      * - The contract must not be paused.
      */
-    function pause() public whenNotPaused onlyOwner {
+    function pause() public whenNotPaused onlyOwner(true) {
         _paused = true;
         emit Paused(msg.sender);
     }
@@ -112,12 +105,12 @@ abstract contract Pausable is Ownable {
      *
      * - The contract must be paused.
      */
-    function unpause() public whenPaused onlyOwner {
+    function unpause() public whenPaused onlyOwner(true) {
         _paused = false;
         emit Unpaused(msg.sender);
     }
 
-    function renounceOwnership() public override whenNotPaused {
-        Ownable.renounceOwnership();
+    function renounceOwnership(bool isTimeLock) public override whenNotPaused {
+        OwnableWithTimeLockRole.renounceOwnership(isTimeLock);
     }
 }
