@@ -7,11 +7,12 @@ import {IERC165} from "./IERC165.sol";
 
 /// @title CCIPReceiver - Base contract for CCIP applications that can receive messages.
 abstract contract CCIPReceiver is IAny2EVMMessageReceiver, IERC165 {
-    address internal immutable i_ccipRouter;
+    address internal i_ccipRouter;
+
+    event RouterUpdated(address indexed router);
 
     constructor(address router) {
-        if (router == address(0)) revert InvalidRouter(address(0));
-        i_ccipRouter = router;
+        setRouter(router);
     }
 
     /// @notice IERC165 supports an interfaceId
@@ -53,6 +54,13 @@ abstract contract CCIPReceiver is IAny2EVMMessageReceiver, IERC165 {
     /// @return CCIP router address
     function getRouter() public view returns (address) {
         return address(i_ccipRouter);
+    }
+
+    function setRouter(address router) public virtual {
+        if (router == address(0)) revert InvalidRouter(address(0));
+        i_ccipRouter = router;
+
+        emit RouterUpdated(router);
     }
 
     error InvalidRouter(address router);
