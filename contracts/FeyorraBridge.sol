@@ -79,8 +79,8 @@ contract FeyorraBridge is
         feyToken = _feyToken;
     }
 
-    function setRouter(address _router) public override onlyOwner {
-        setRouter(_router);
+    function setRouter(address _router) public onlyOwner {
+        _setRouter(_router);
     }
 
     function estimateFee(

@@ -12,7 +12,7 @@ abstract contract CCIPReceiver is IAny2EVMMessageReceiver, IERC165 {
     event RouterUpdated(address indexed router);
 
     constructor(address router) {
-        setRouter(router);
+        _setRouter(router);
     }
 
     /// @notice IERC165 supports an interfaceId
@@ -56,13 +56,6 @@ abstract contract CCIPReceiver is IAny2EVMMessageReceiver, IERC165 {
         return address(i_ccipRouter);
     }
 
-    function setRouter(address router) public virtual {
-        if (router == address(0)) revert InvalidRouter(address(0));
-        i_ccipRouter = router;
-
-        emit RouterUpdated(router);
-    }
-
     error InvalidRouter(address router);
 
     /// @dev only calls from the set router are accepted.
@@ -70,5 +63,12 @@ abstract contract CCIPReceiver is IAny2EVMMessageReceiver, IERC165 {
         if (msg.sender != address(i_ccipRouter))
             revert InvalidRouter(msg.sender);
         _;
+    }
+
+    function _setRouter(address router) internal {
+        if (router == address(0)) revert InvalidRouter(address(0));
+        i_ccipRouter = router;
+
+        emit RouterUpdated(router);
     }
 }
