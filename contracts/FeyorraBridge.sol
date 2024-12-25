@@ -79,7 +79,7 @@ contract FeyorraBridge is
         feyToken = _feyToken;
     }
 
-    function setRouter(address _router) public onlyOwner {
+    function setRouter(address _router) external onlyOwner {
         _setRouter(_router);
     }
 
