@@ -9,7 +9,8 @@ import {IERC20} from "./IERC20.sol";
 import {Pausable} from "./Pausable.sol";
 import {RequestIdGenerator} from "./RequestIdGenerator.sol";
 import {UniqueRequestIdGuard} from "./UniqueRequestIdGuard.sol";
-import {SingleTokenRateLimiter} from "./RateLimit/SingleTokenRateLimiter.sol";
+import {SingleTokenInOutRateLimiter} from "./RateLimit/SingleTokenInOutRateLimiter.sol";
+import {RateLimiter} from "./RateLimit/RateLimiter.sol";
 import {ChainManager} from "./ChainManager.sol";
 import {OwnableWithTimeLockRole} from "./OwnableWithTimeLockRole.sol";
 
@@ -18,7 +19,7 @@ contract FeyorraBridge is
     Pausable,
     RequestIdGenerator,
     UniqueRequestIdGuard,
-    SingleTokenRateLimiter,
+    SingleTokenInOutRateLimiter,
     ChainManager
 {
     using SafeERC20 for IERC20;
@@ -67,17 +68,16 @@ contract FeyorraBridge is
     constructor(
         address _router,
         address _feyToken,
-        uint128 _tokenTransferCapacity,
-        uint128 _tokenTransferRate,
+        RateLimiter.InitBucket[2] memory _tokenTransferLimitConfig,
         address _immediateOwner,
         address _timeLockedOwner
     )
         OwnableWithTimeLockRole(_immediateOwner, _timeLockedOwner)
         CCIPReceiver(_router)
-        SingleTokenRateLimiter(
+        SingleTokenInOutRateLimiter(
             _feyToken,
-            _tokenTransferCapacity,
-            _tokenTransferRate
+            _tokenTransferLimitConfig[0],
+            _tokenTransferLimitConfig[1]
         )
     {
         feyToken = _feyToken;
@@ -124,7 +124,7 @@ contract FeyorraBridge is
             false,
             false
         );
-        enforceTokenTransferLimit(_amount);
+        enforceTokenTransferLimit(true, _amount);
 
         Client.EVM2AnyMessage memory evm2AnyMessage = buildCCIPMessage(
             _receiverBridge,
@@ -191,7 +191,7 @@ contract FeyorraBridge is
             false,
             true
         );
-        enforceTokenTransferLimit(_amount);
+        enforceTokenTransferLimit(true, _amount);
 
         uint88 fees = chains[_destinationChainSelector].fees;
         if (fees > msg.value) {
@@ -274,6 +274,8 @@ contract FeyorraBridge is
         bytes memory _senderBridge,
         TokenAmount memory _tokenAmount
     ) private {
+        enforceTokenTransferLimit(false, _tokenAmount.amount);
+
         IERC20(feyToken).safeTransfer(
             _tokenAmount.recipient,
             _tokenAmount.amount
@@ -305,12 +307,14 @@ contract FeyorraBridge is
     }
 
     function updateTokenTransferLimitConfig(
+        bool _isInput,
         uint128 _tokenTransferCapacity,
         uint128 _tokenTransferRate,
         bool _isDisabled
     ) public onlyOwner(true) {
         _updateTokenTransferLimitConfig(
             feyToken,
+            _isInput,
             _tokenTransferCapacity,
             _tokenTransferRate,
             _isDisabled

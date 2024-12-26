@@ -3,13 +3,15 @@ pragma solidity ^0.8.24;
 
 import {RateLimiter} from "./RateLimiter.sol";
 
-contract SingleTokenRateLimiter {
+contract SingleTokenInOutRateLimiter {
     using RateLimiter for RateLimiter.Bucket;
 
-    RateLimiter.Bucket private tokenBucket;
+    RateLimiter.Bucket private inTokenBucket;
+    RateLimiter.Bucket private outTokenBucket;
 
     event TokenTransferLimitConfigUpdated(
         address indexed token,
+        bool indexed isInput,
         uint128 tokenTransferCapacity,
         uint128 tokenTransferRate,
         bool isDisabled
@@ -17,24 +19,35 @@ contract SingleTokenRateLimiter {
 
     constructor(
         address _token,
-        uint128 _tokenTransferCapacity,
-        uint128 _tokenTransferRate
+        RateLimiter.InitBucket memory _inTokenBucket,
+        RateLimiter.InitBucket memory _outTokenBucket
     ) {
-        tokenBucket.init(_tokenTransferCapacity, _tokenTransferRate);
+        inTokenBucket.init(_inTokenBucket);
 
         emit TokenTransferLimitConfigUpdated(
             _token,
-            _tokenTransferCapacity,
-            _tokenTransferRate,
-            tokenBucket.isDisabled
+            true,
+            _inTokenBucket.capacity,
+            _inTokenBucket.rate,
+            false
+        );
+
+        outTokenBucket.init(_outTokenBucket);
+
+        emit TokenTransferLimitConfigUpdated(
+            _token,
+            false,
+            _outTokenBucket.capacity,
+            _outTokenBucket.rate,
+            false
         );
     }
 
-    function getTokenTransferLimitBucket()
-        public
-        view
-        returns (RateLimiter.Bucket memory)
-    {
+    function getTokenTransferLimitBucket(
+        bool _isInput
+    ) public view returns (RateLimiter.Bucket memory) {
+        RateLimiter.Bucket storage tokenBucket = getTokenBucket(_isInput);
+
         return
             RateLimiter.Bucket({
                 tokens: uint128(tokenBucket.getAvailableTokens()),
@@ -45,17 +58,21 @@ contract SingleTokenRateLimiter {
             });
     }
 
-    function enforceTokenTransferLimit(uint256 _amount) internal {
-        tokenBucket.consume(_amount);
+    function enforceTokenTransferLimit(
+        bool _isInput,
+        uint256 _amount
+    ) internal {
+        getTokenBucket(_isInput).consume(_amount);
     }
 
     function _updateTokenTransferLimitConfig(
         address _token,
+        bool _isInput,
         uint128 _tokenTransferCapacity,
         uint128 _tokenTransferRate,
         bool _isDisabled
     ) internal {
-        tokenBucket.updateConfig(
+        getTokenBucket(_isInput).updateConfig(
             _tokenTransferCapacity,
             _tokenTransferRate,
             _isDisabled
@@ -63,9 +80,16 @@ contract SingleTokenRateLimiter {
 
         emit TokenTransferLimitConfigUpdated(
             _token,
+            _isInput,
             _tokenTransferCapacity,
             _tokenTransferRate,
             _isDisabled
         );
+    }
+
+    function getTokenBucket(
+        bool _isInput
+    ) private view returns (RateLimiter.Bucket storage) {
+        return _isInput ? inTokenBucket : outTokenBucket;
     }
 }

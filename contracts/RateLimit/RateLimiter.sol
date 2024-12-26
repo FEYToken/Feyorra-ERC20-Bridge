@@ -4,6 +4,11 @@ pragma solidity ^0.8.24;
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 library RateLimiter {
+    struct InitBucket {
+        uint128 capacity;
+        uint128 rate;
+    }
+
     struct Bucket {
         uint128 tokens;
         uint32 lastUpdated;
@@ -19,12 +24,11 @@ library RateLimiter {
 
     function init(
         Bucket storage bucket,
-        uint128 _capacity,
-        uint128 _rate
-    ) internal validateRateCapacity(_capacity, _rate) {
-        bucket.capacity = _capacity;
-        bucket.rate = _rate;
-        bucket.tokens = _capacity;
+        InitBucket memory _initBucket
+    ) internal validateRateCapacity(_initBucket.capacity, _initBucket.rate) {
+        bucket.capacity = _initBucket.capacity;
+        bucket.rate = _initBucket.rate;
+        bucket.tokens = _initBucket.capacity;
         bucket.lastUpdated = uint32(block.timestamp);
     }
 
