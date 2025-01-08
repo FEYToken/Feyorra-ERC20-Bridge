@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {Pausable} from "./Pausable.sol";
+import {Pausable} from "./Access/Pausable.sol";
 
 abstract contract ChainManager is Pausable {
     // store in a single storage slot: 20 (hash) + 11 (fees) + 1 (flags) = 32 bytes

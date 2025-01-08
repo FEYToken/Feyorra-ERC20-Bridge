@@ -4,16 +4,17 @@ pragma solidity 0.8.24;
 import {IRouterClient} from "./CCIP/IRouterClient.sol";
 import {Client} from "./CCIP/Client.sol";
 import {CCIPReceiver} from "./CCIP/CCIPReceiver.sol";
-import {SafeERC20} from "./SafeERC20.sol";
-import {IERC20} from "./IERC20.sol";
-import {Pausable} from "./Pausable.sol";
-import {RequestIdGenerator} from "./RequestIdGenerator.sol";
-import {UniqueRequestIdGuard} from "./UniqueRequestIdGuard.sol";
+import {SafeERC20} from "./ERC20/SafeERC20.sol";
+import {IERC20} from "./ERC20/IERC20.sol";
+import {IBurnable} from "./ERC20/IBurnable.sol";
+import {IMintable} from "./ERC20/IMintable.sol";
+import {OwnableWithTimeLockRole} from "./Access/OwnableWithTimeLockRole.sol";
+import {Pausable} from "./Access/Pausable.sol";
 import {SingleTokenInOutRateLimiter} from "./RateLimit/SingleTokenInOutRateLimiter.sol";
 import {RateLimiter} from "./RateLimit/RateLimiter.sol";
+import {RequestIdGenerator} from "./RequestIdGenerator.sol";
+import {UniqueRequestIdGuard} from "./UniqueRequestIdGuard.sol";
 import {ChainManager} from "./ChainManager.sol";
-import {OwnableWithTimeLockRole} from "./OwnableWithTimeLockRole.sol";
-import {ISupplyAdjustable} from "./ISupplyAdjustable.sol";
 
 contract FeyorraBridge is
     CCIPReceiver,
@@ -169,7 +170,7 @@ contract FeyorraBridge is
         IERC20(feyToken).safeTransferFrom(_spender, address(this), _amount);
 
         if (!isOriginalChain) {
-            ISupplyAdjustable(feyToken).burn(_amount);
+            IBurnable(feyToken).burn(_amount);
         }
     }
 
@@ -289,7 +290,7 @@ contract FeyorraBridge is
         enforceTokenTransferLimit(false, _tokenAmount.amount);
 
         if (!isOriginalChain) {
-            ISupplyAdjustable(feyToken).mint(_tokenAmount.amount);
+            IMintable(feyToken).mint(_tokenAmount.amount);
         }
 
         IERC20(feyToken).safeTransfer(
