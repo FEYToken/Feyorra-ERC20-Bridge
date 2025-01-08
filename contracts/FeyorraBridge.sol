@@ -84,6 +84,8 @@ contract FeyorraBridge is
             _tokenTransferLimitConfig[1]
         )
     {
+        require(_feyToken != address(0x0), "Invalid token address");
+
         isOriginalChain = _isOriginalChain;
         feyToken = _feyToken;
     }
@@ -287,6 +289,8 @@ contract FeyorraBridge is
         bytes memory _senderBridge,
         TokenAmount memory _tokenAmount
     ) private {
+        require(_tokenAmount.recipient != address(0x0), "Invalid recipient");
+
         enforceTokenTransferLimit(false, _tokenAmount.amount);
 
         if (!isOriginalChain) {
@@ -339,8 +343,9 @@ contract FeyorraBridge is
     }
 
     function withdrawToken(address _beneficiary) public onlyOwner(true) {
-        uint256 amount = IERC20(feyToken).balanceOf(address(this));
+        require(_beneficiary != address(0x0), "Invalid beneficiary");
 
+        uint256 amount = IERC20(feyToken).balanceOf(address(this));
         if (amount == 0) {
             revert NothingToWithdraw();
         }
@@ -349,8 +354,9 @@ contract FeyorraBridge is
     }
 
     function withdrawNative(address _beneficiary) public onlyOwner(true) {
-        uint256 amount = address(this).balance;
+        require(_beneficiary != address(0x0), "Invalid beneficiary");
 
+        uint256 amount = address(this).balance;
         if (amount == 0) {
             revert NothingToWithdraw();
         }

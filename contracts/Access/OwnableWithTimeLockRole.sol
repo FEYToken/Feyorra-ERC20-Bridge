@@ -66,6 +66,11 @@ abstract contract OwnableWithTimeLockRole {
      * for a contract address that manages time-locking externally.
      */
     constructor(address immediateOwner_, address timeLockedOwner_) {
+        require(
+            immediateOwner_ != address(0x0) && timeLockedOwner_ != address(0x0),
+            "OwnableWithTimeLockRole: owner cannot be the zero address"
+        );
+
         _transferOwnership(immediateOwner_, false);
         _transferOwnership(timeLockedOwner_, true);
     }

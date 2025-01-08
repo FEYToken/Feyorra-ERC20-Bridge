@@ -27,6 +27,15 @@ abstract contract ChainManager is Pausable {
         bool _isDestination,
         bool _isCustom
     ) external whenNotPaused onlyOwner(false) {
+        require(
+            _bridgeAddress.length > 0,
+            "ChainManager: invalid bridge address"
+        );
+
+        if (_isCustom) {
+            require(_fees > 0, "ChainManager: invalid fees for custom chain");
+        }
+
         uint8 flags = 0;
 
         flags = setFlag(flags, 0, _isSource);
