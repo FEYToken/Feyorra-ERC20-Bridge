@@ -13,6 +13,7 @@ import {SingleTokenInOutRateLimiter} from "./RateLimit/SingleTokenInOutRateLimit
 import {RateLimiter} from "./RateLimit/RateLimiter.sol";
 import {ChainManager} from "./ChainManager.sol";
 import {OwnableWithTimeLockRole} from "./OwnableWithTimeLockRole.sol";
+import {ISupplyAdjustable} from "./ISupplyAdjustable.sol";
 
 contract FeyorraBridge is
     CCIPReceiver,
@@ -29,6 +30,7 @@ contract FeyorraBridge is
         uint256 amount;
     }
 
+    bool public immutable isOriginalChain;
     address public immutable feyToken;
 
     event TransferFeyorraRequest(
@@ -68,6 +70,7 @@ contract FeyorraBridge is
     constructor(
         address _router,
         address _feyToken,
+        bool _isOriginalChain,
         RateLimiter.InitBucket[2] memory _tokenTransferLimitConfig,
         address _immediateOwner,
         address _timeLockedOwner
@@ -80,6 +83,7 @@ contract FeyorraBridge is
             _tokenTransferLimitConfig[1]
         )
     {
+        isOriginalChain = _isOriginalChain;
         feyToken = _feyToken;
     }
 
@@ -141,7 +145,7 @@ contract FeyorraBridge is
             revert NotEnoughFees(msg.value, fees);
         }
 
-        IERC20(feyToken).safeTransferFrom(msg.sender, address(this), _amount);
+        processIncomingTokens(msg.sender, _amount);
 
         requestId = router.ccipSend{value: fees}(
             _destinationChainSelector,
@@ -159,6 +163,14 @@ contract FeyorraBridge is
         );
 
         excessIfNeeded(fees);
+    }
+
+    function processIncomingTokens(address _spender, uint256 _amount) private {
+        IERC20(feyToken).safeTransferFrom(_spender, address(this), _amount);
+
+        if (!isOriginalChain) {
+            ISupplyAdjustable(feyToken).burn(_amount);
+        }
     }
 
     function excessIfNeeded(uint256 fees) private {
@@ -198,7 +210,7 @@ contract FeyorraBridge is
             revert NotEnoughFees(msg.value, fees);
         }
 
-        IERC20(feyToken).safeTransferFrom(msg.sender, address(this), _amount);
+        processIncomingTokens(msg.sender, _amount);
 
         (bytes32 requestId, uint256 nonce) = getRequestId(
             _destinationChainSelector,
@@ -275,6 +287,10 @@ contract FeyorraBridge is
         TokenAmount memory _tokenAmount
     ) private {
         enforceTokenTransferLimit(false, _tokenAmount.amount);
+
+        if (!isOriginalChain) {
+            ISupplyAdjustable(feyToken).mint(_tokenAmount.amount);
+        }
 
         IERC20(feyToken).safeTransfer(
             _tokenAmount.recipient,
