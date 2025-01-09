@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOwnable} from "./IOwnable.sol";
+import {IOwnable} from "../Access/IOwnable.sol";
 
 /// @title The ConfirmedOwner contract
 /// @notice A contract with helpers for basic contract ownership.

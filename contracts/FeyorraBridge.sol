@@ -10,6 +10,7 @@ import {IBurnable} from "./ERC20/IBurnable.sol";
 import {IMintable} from "./ERC20/IMintable.sol";
 import {OwnableWithTimeLockRole} from "./Access/OwnableWithTimeLockRole.sol";
 import {Pausable} from "./Access/Pausable.sol";
+import {IOwnable} from "./Access/IOwnable.sol";
 import {SingleTokenInOutRateLimiter} from "./RateLimit/SingleTokenInOutRateLimiter.sol";
 import {RateLimiter} from "./RateLimit/RateLimiter.sol";
 import {RequestIdGenerator} from "./RequestIdGenerator.sol";
@@ -363,5 +364,12 @@ contract FeyorraBridge is
 
         (bool success, ) = payable(_beneficiary).call{value: amount}("");
         require(success, "Transfer failed");
+    }
+
+    function transferTokenOwnership(
+        address _newOwner
+    ) external onlyOwner(true) {
+        require(!isOriginalChain, "Only for non-original chain");
+        IOwnable(feyToken).transferOwnership(_newOwner);
     }
 }
