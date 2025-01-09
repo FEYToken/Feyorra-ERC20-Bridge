@@ -333,7 +333,7 @@ contract FeyorraBridge is
         uint128 _tokenTransferCapacity,
         uint128 _tokenTransferRate,
         bool _isDisabled
-    ) public onlyOwner(true) {
+    ) external onlyOwner(true) {
         _updateTokenTransferLimitConfig(
             feyToken,
             _isInput,
@@ -343,7 +343,7 @@ contract FeyorraBridge is
         );
     }
 
-    function withdrawToken(address _beneficiary) public onlyOwner(true) {
+    function withdrawToken(address _beneficiary) external onlyOwner(true) {
         require(_beneficiary != address(0x0), "Invalid beneficiary");
 
         uint256 amount = IERC20(feyToken).balanceOf(address(this));
@@ -354,7 +354,7 @@ contract FeyorraBridge is
         IERC20(feyToken).safeTransfer(_beneficiary, amount);
     }
 
-    function withdrawNative(address _beneficiary) public onlyOwner(true) {
+    function withdrawNative(address _beneficiary) external onlyOwner(true) {
         require(_beneficiary != address(0x0), "Invalid beneficiary");
 
         uint256 amount = address(this).balance;
