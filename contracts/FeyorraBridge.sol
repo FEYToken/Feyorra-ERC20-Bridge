@@ -66,8 +66,13 @@ contract FeyorraBridge is
 
     event RefundExcessFee(address indexed recipient, uint256 amount);
 
+    event WithdrawalExecuted(
+        address indexed beneficiary,
+        address indexed tokenAddress,
+        uint256 amount
+    );
+
     error NotEnoughFees(uint256 feesSent, uint256 requiredFees);
-    error NothingToWithdraw();
 
     constructor(
         address _router,
@@ -416,23 +421,23 @@ contract FeyorraBridge is
         require(_beneficiary != address(0x0), "Invalid beneficiary");
 
         uint256 amount = IERC20(feyToken).balanceOf(address(this));
-        if (amount == 0) {
-            revert NothingToWithdraw();
-        }
+        require(amount > 0, "Nothing to withdraw");
 
         IERC20(feyToken).safeTransfer(_beneficiary, amount);
+
+        emit WithdrawalExecuted(_beneficiary, feyToken, amount);
     }
 
     function withdrawNative(address _beneficiary) external onlyOwner(true) {
         require(_beneficiary != address(0x0), "Invalid beneficiary");
 
         uint256 amount = address(this).balance;
-        if (amount == 0) {
-            revert NothingToWithdraw();
-        }
+        require(amount > 0, "Nothing to withdraw");
 
         (bool success, ) = payable(_beneficiary).call{value: amount}("");
         require(success, "Transfer failed");
+
+        emit WithdrawalExecuted(_beneficiary, address(0x0), amount);
     }
 
     function transferTokenOwnership(

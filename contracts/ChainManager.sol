@@ -13,6 +13,16 @@ abstract contract ChainManager is Pausable {
 
     mapping(uint64 => Chain) public chains;
 
+    event ChainUpdated(
+        uint64 indexed chainSelector,
+        bytes indexed bridgeAddress,
+        bytes20 bridgeAddressHash,
+        uint88 fees,
+        bool isSource,
+        bool isDestination,
+        bool isCustom
+    );
+
     function deleteChain(
         uint64 _chainSelector
     ) external whenNotPaused onlyOwner(false) {
@@ -42,10 +52,21 @@ abstract contract ChainManager is Pausable {
         flags = setFlag(flags, 1, _isDestination);
         flags = setFlag(flags, 2, _isCustom);
 
+        bytes20 bridgeAddressHash = ripemd160(_bridgeAddress);
         chains[_chainSelector] = Chain({
-            bridgeAddressHash: ripemd160(_bridgeAddress),
+            bridgeAddressHash: bridgeAddressHash,
             fees: _fees,
             flags: flags
+        });
+
+        emit ChainUpdated({
+            chainSelector: _chainSelector,
+            bridgeAddress: _bridgeAddress,
+            bridgeAddressHash: bridgeAddressHash,
+            fees: _fees,
+            isSource: _isSource,
+            isDestination: _isDestination,
+            isCustom: _isCustom
         });
     }
 
