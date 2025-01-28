@@ -72,6 +72,8 @@ contract FeyorraBridge is
         uint256 amount
     );
 
+    event TransferTokenOwnership(address indexed newOwner);
+
     error NotEnoughFees(uint256 feesSent, uint256 requiredFees);
 
     constructor(
@@ -444,6 +446,8 @@ contract FeyorraBridge is
         address _newOwner
     ) external onlyOwner(true) {
         require(!isOriginalChain, "Only for non-original chain");
+
         IOwnable(feyToken).transferOwnership(_newOwner);
+        emit TransferTokenOwnership(_newOwner);
     }
 }

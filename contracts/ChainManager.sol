@@ -22,10 +22,13 @@ abstract contract ChainManager is Pausable {
         bool isCustom
     );
 
+    event ChainDeleted(uint64 indexed chainSelector);
+
     function deleteChain(
         uint64 _chainSelector
     ) external whenNotPaused onlyOwner(false) {
         delete chains[_chainSelector];
+        emit ChainDeleted(_chainSelector);
     }
 
     function updateChain(
