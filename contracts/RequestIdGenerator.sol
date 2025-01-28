@@ -14,7 +14,7 @@ abstract contract RequestIdGenerator {
         nonce++;
         return (
             keccak256(
-                abi.encodePacked(
+                abi.encode(
                     nonce,
                     block.chainid,
                     block.timestamp,
