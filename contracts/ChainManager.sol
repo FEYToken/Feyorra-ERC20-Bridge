@@ -15,7 +15,7 @@ abstract contract ChainManager is Pausable {
 
     event ChainUpdated(
         uint64 indexed chainSelector,
-        bytes indexed bridgeAddress,
+        bytes bridgeAddress,
         uint88 fees,
         bool isSource,
         bool isDestination,
