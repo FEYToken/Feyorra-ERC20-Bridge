@@ -3,6 +3,11 @@ pragma solidity ^0.8.24;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+// `capacity` defines the maximum number of tokens the bucket can hold at any given time.
+// for rate limiting rarely require the larger range of `uint256`.
+// Consuming an amount larger than `uint128` (`2^128 - 1`) in a single operation is considered abnormal
+// because such a high value would typically exceed practical use cases for rate-limiting systems.
+// If consumption of excessively large values is attempted, it may indicate misuse or a misconfiguration
 library RateLimiter {
     struct InitBucket {
         uint128 capacity;
