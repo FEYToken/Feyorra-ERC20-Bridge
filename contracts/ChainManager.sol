@@ -11,6 +11,16 @@ abstract contract ChainManager is Pausable {
         uint8 flags; // 0: isSource, 1: isDestination, 2: isCustom
     }
 
+    struct ChainView {
+        uint64 chainSelector;
+        bytes bridgeAddress;
+        uint88 fees;
+        bool isSource;
+        bool isDestination;
+        bool isCustom;
+    }
+
+    bool private initialized;
     mapping(uint64 => Chain) public chains;
 
     event ChainUpdated(
@@ -24,49 +34,66 @@ abstract contract ChainManager is Pausable {
 
     event ChainDeleted(uint64 indexed chainSelector);
 
+    event ChainFeesUpdated(
+        uint64 indexed chainSelector,
+        bytes bridgeAddress,
+        uint88 fees
+    );
+
+    function setupChains(ChainView[] calldata _chains) external {
+        require(!initialized, "ChainManager: already initialized");
+        initialized = true;
+
+        for (uint256 i = 0; i < _chains.length; i++) {
+            _updateChain(_chains[i]);
+        }
+    }
+
     function deleteChain(
         uint64 _chainSelector
-    ) external whenNotPaused onlyOwner(false) {
+    ) external whenNotPaused onlyOwner(true) {
         delete chains[_chainSelector];
         emit ChainDeleted(_chainSelector);
     }
 
     function updateChain(
-        uint64 _chainSelector,
-        bytes calldata _bridgeAddress,
-        uint88 _fees,
-        bool _isSource,
-        bool _isDestination,
-        bool _isCustom
-    ) external whenNotPaused onlyOwner(false) {
+        ChainView calldata _chain
+    ) external whenNotPaused onlyOwner(true) {
+        _updateChain(_chain);
+    }
+
+    function _updateChain(ChainView calldata _chain) private {
         require(
-            _bridgeAddress.length > 0,
+            _chain.bridgeAddress.length > 0,
             "ChainManager: invalid bridge address"
         );
 
-        if (_isCustom) {
-            require(_fees > 0, "ChainManager: invalid fees for custom chain");
+        if (_chain.isCustom) {
+            require(
+                _chain.fees > 0,
+                "ChainManager: invalid fees for custom chain"
+            );
         }
 
         uint8 flags = 0;
 
-        flags = setFlag(flags, 0, _isSource);
-        flags = setFlag(flags, 1, _isDestination);
-        flags = setFlag(flags, 2, _isCustom);
+        flags = setFlag(flags, 0, _chain.isSource);
+        flags = setFlag(flags, 1, _chain.isDestination);
+        flags = setFlag(flags, 2, _chain.isCustom);
 
-        chains[_chainSelector] = Chain({
-            bridgeAddressHash: ripemd160(_bridgeAddress),
-            fees: _fees,
+        chains[_chain.chainSelector] = Chain({
+            bridgeAddressHash: ripemd160(_chain.bridgeAddress),
+            fees: _chain.fees,
             flags: flags
         });
 
         emit ChainUpdated({
-            chainSelector: _chainSelector,
-            bridgeAddress: _bridgeAddress,
-            fees: _fees,
-            isSource: _isSource,
-            isDestination: _isDestination,
-            isCustom: _isCustom
+            chainSelector: _chain.chainSelector,
+            bridgeAddress: _chain.bridgeAddress,
+            fees: _chain.fees,
+            isSource: _chain.isSource,
+            isDestination: _chain.isDestination,
+            isCustom: _chain.isCustom
         });
     }
 
@@ -117,5 +144,23 @@ abstract contract ChainManager is Pausable {
         uint8 _position
     ) private pure returns (bool) {
         return (_flags & (1 << _position)) != 0;
+    }
+
+    function updateChainFees(
+        uint64 _chainSelector,
+        bytes calldata _bridgeAddress,
+        uint88 _fees
+    ) external whenNotPaused onlyOwner(false) {
+        require(_fees > 0, "ChainManager: invalid fees");
+
+        Chain storage chain = chains[_chainSelector];
+        require(
+            chain.bridgeAddressHash == ripemd160(_bridgeAddress),
+            "ChainManager: invalid bridge address"
+        );
+
+        chain.fees = _fees;
+
+        emit ChainFeesUpdated(_chainSelector, _bridgeAddress, _fees);
     }
 }
