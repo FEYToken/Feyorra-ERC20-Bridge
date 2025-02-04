@@ -159,9 +159,10 @@ abstract contract ChainManager is Pausable {
         );
 
         Chain storage chain = chains[_chainSelector];
+        (, , bool isCustom) = parseChainFlags(chain.flags);
         require(
-            chain.bridgeAddressHash == ripemd160(_bridgeAddress),
-            "ChainManager: invalid bridge address"
+            isCustom && chain.bridgeAddressHash == ripemd160(_bridgeAddress),
+            "ChainManager: invalid chain data"
         );
 
         chain.fees = _fees;
