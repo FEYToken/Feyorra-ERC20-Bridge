@@ -40,7 +40,9 @@ abstract contract ChainManager is Pausable {
         uint88 fees
     );
 
-    function setupChains(ChainView[] calldata _chains) external {
+    function setupChains(
+        ChainView[] calldata _chains
+    ) external onlyOwner(false) {
         require(!initialized, "ChainManager: already initialized");
         initialized = true;
 
