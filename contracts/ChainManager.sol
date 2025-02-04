@@ -151,7 +151,10 @@ abstract contract ChainManager is Pausable {
         bytes calldata _bridgeAddress,
         uint88 _fees
     ) external whenNotPaused onlyOwner(false) {
-        require(_fees > 0, "ChainManager: invalid fees");
+        require(
+            _fees > 0 && _bridgeAddress.length > 0,
+            "ChainManager: invalid fees or bridge address"
+        );
 
         Chain storage chain = chains[_chainSelector];
         require(
