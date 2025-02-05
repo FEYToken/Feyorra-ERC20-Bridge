@@ -46,6 +46,11 @@ abstract contract OwnableWithTimeLockRole {
     error OwnableInvalidOwner(address owner);
 
     /**
+     * @dev Emitted when the deployer attempts to set one of initial owners to the zero address.
+     */
+    error InvalidInitialOwner(address immediateOwner, address timeLockedOwner);
+
+    /**
      * @dev Emitted when ownership changes from `previousOwner` to `newOwner`.
      *      The `isTimeLock` flag indicates whether the change affected
      *      `_timeLockedOwner` (true) or `_immediateOwner` (false).
@@ -66,10 +71,11 @@ abstract contract OwnableWithTimeLockRole {
      * for a contract address that manages time-locking externally.
      */
     constructor(address immediateOwner_, address timeLockedOwner_) {
-        require(
-            immediateOwner_ != address(0x0) && timeLockedOwner_ != address(0x0),
-            "OwnableWithTimeLockRole: owner cannot be the zero address"
-        );
+        if (
+            immediateOwner_ == address(0x0) || timeLockedOwner_ == address(0x0)
+        ) {
+            revert InvalidInitialOwner(immediateOwner_, timeLockedOwner_);
+        }
 
         _transferOwnership(immediateOwner_, false);
         _transferOwnership(timeLockedOwner_, true);

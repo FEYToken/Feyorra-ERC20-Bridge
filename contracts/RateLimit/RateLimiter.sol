@@ -22,8 +22,17 @@ library RateLimiter {
         bool isDisabled;
     }
 
+    error ZeroRate();
+    error RateNotLessThanCapacity(uint128 capacity, uint128 rate);
+    error RateLimitExceeded(uint256 available, uint256 requested);
+
     modifier validateRateCapacity(uint128 capacity, uint128 rate) {
-        require(rate > 0 && rate < capacity, "Invalid rate or capacity");
+        if (rate == 0) {
+            revert ZeroRate();
+        }
+        if (rate >= capacity) {
+            revert RateNotLessThanCapacity(capacity, rate);
+        }
         _;
     }
 
@@ -41,7 +50,9 @@ library RateLimiter {
         if (amount == 0 || bucket.isDisabled) return;
 
         uint256 availableTokens = getAvailableTokens(bucket);
-        require(availableTokens >= amount, "Rate limit exceeded");
+        if (availableTokens < amount) {
+            revert RateLimitExceeded(availableTokens, amount);
+        }
 
         bucket.tokens = uint128(availableTokens - amount);
         bucket.lastUpdated = uint32(block.timestamp);

@@ -75,6 +75,12 @@ contract FeyorraBridge is
     event TransferTokenOwnership(address indexed newOwner);
 
     error NotEnoughFees(uint256 feesSent, uint256 requiredFees);
+    error ZeroTokenAddress();
+    error ZeroRecipientAddress();
+    error ZeroTransferAmount();
+    error NothingToWithdraw();
+    error NativeTransferFailed();
+    error OriginalChainOwnershipTransferNotAllowed();
 
     constructor(
         address _router,
@@ -92,7 +98,9 @@ contract FeyorraBridge is
             _tokenTransferLimitConfig[1]
         )
     {
-        require(_feyToken != address(0x0), "Invalid token address");
+        if (_feyToken == address(0)) {
+            revert ZeroTokenAddress();
+        }
 
         isOriginalChain = _isOriginalChain;
         feyToken = _feyToken;
@@ -168,10 +176,12 @@ contract FeyorraBridge is
         address _recipient,
         bytes memory _ccipExtraArgs
     ) external payable whenNotPaused returns (bytes32 requestId) {
-        require(
-            _recipient != address(0x0) && _amount > 0,
-            "Invalid recipient or amount"
-        );
+        if (_recipient == address(0x0)) {
+            revert ZeroRecipientAddress();
+        }
+        if (_amount == 0) {
+            revert ZeroTransferAmount();
+        }
 
         validateChain(
             _destinationChainSelector,
@@ -272,10 +282,12 @@ contract FeyorraBridge is
         uint256 _amount,
         bytes calldata _recipient
     ) external payable whenNotPaused returns (bytes32) {
-        require(
-            _recipient.length > 0 && _amount > 0,
-            "Invalid recipient or amount"
-        );
+        if (_recipient.length == 0) {
+            revert ZeroRecipientAddress();
+        }
+        if (_amount == 0) {
+            revert ZeroTransferAmount();
+        }
 
         validateChain(
             _destinationChainSelector,
@@ -366,7 +378,9 @@ contract FeyorraBridge is
         bytes memory _senderBridge,
         TokenAmount memory _tokenAmount
     ) private {
-        require(_tokenAmount.recipient != address(0x0), "Invalid recipient");
+        if (_tokenAmount.recipient == address(0x0)) {
+            revert ZeroRecipientAddress();
+        }
 
         enforceTokenTransferLimit(false, _tokenAmount.amount);
 
@@ -420,10 +434,14 @@ contract FeyorraBridge is
     }
 
     function withdrawToken(address _beneficiary) external onlyOwner(true) {
-        require(_beneficiary != address(0x0), "Invalid beneficiary");
+        if (_beneficiary == address(0x0)) {
+            revert ZeroRecipientAddress();
+        }
 
         uint256 amount = IERC20(feyToken).balanceOf(address(this));
-        require(amount > 0, "Nothing to withdraw");
+        if (amount == 0) {
+            revert NothingToWithdraw();
+        }
 
         IERC20(feyToken).safeTransfer(_beneficiary, amount);
 
@@ -431,13 +449,19 @@ contract FeyorraBridge is
     }
 
     function withdrawNative(address _beneficiary) external onlyOwner(true) {
-        require(_beneficiary != address(0x0), "Invalid beneficiary");
+        if (_beneficiary == address(0x0)) {
+            revert ZeroRecipientAddress();
+        }
 
         uint256 amount = address(this).balance;
-        require(amount > 0, "Nothing to withdraw");
+        if (amount == 0) {
+            revert NothingToWithdraw();
+        }
 
         (bool success, ) = payable(_beneficiary).call{value: amount}("");
-        require(success, "Transfer failed");
+        if (!success) {
+            revert NativeTransferFailed();
+        }
 
         emit WithdrawalExecuted(_beneficiary, address(0x0), amount);
     }
@@ -445,7 +469,9 @@ contract FeyorraBridge is
     function transferTokenOwnership(
         address _newOwner
     ) external onlyOwner(true) {
-        require(!isOriginalChain, "Only for non-original chain");
+        if (isOriginalChain) {
+            revert OriginalChainOwnershipTransferNotAllowed();
+        }
 
         IOwnable(feyToken).transferOwnership(_newOwner);
         emit TransferTokenOwnership(_newOwner);
