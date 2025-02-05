@@ -98,7 +98,7 @@ contract FeyorraBridge is
             _tokenTransferLimitConfig[1]
         )
     {
-        if (_feyToken == address(0)) {
+        if (_feyToken == address(0x0)) {
             revert ZeroTokenAddress();
         }
 
@@ -194,7 +194,7 @@ contract FeyorraBridge is
         Client.EVM2AnyMessage memory evm2AnyMessage = buildCCIPMessage(
             _receiverBridge,
             TokenAmount({amount: _amount, recipient: _recipient}),
-            address(0),
+            address(0x0),
             _ccipExtraArgs
         );
 
