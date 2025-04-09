@@ -1,8 +1,11 @@
 {
   "name": "feyorra-erc20-bridge",
   "scripts": {
-    "test": "hardhat test",
-    "build": "hardhat compile"
+    "test": "npm run hh test",
+    "build": "npm run hh compile",
+    "hh": "dotenv -e .env -- hardhat",
+    "deploy-bridge": "npm run hh ignition deploy ignition/modules/FeyorraBridge.ts -- --parameters deploy-parameters.json",
+    "deploy-timelock-owner": "npm run hh ignition deploy ignition/modules/TimelockOwner.ts -- --parameters deploy-parameters.json"
   },
   "volta": {
     "node": "20.15.0"
@@ -10,7 +13,8 @@
   "dependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts": "^5.1.0",
-    "dotenv": "^16.4.7",
+    "dotenv-cli": "^8.0.0",
+    "ethers": "^6.13.5",
     "hardhat": "^2.22.13"
   },
   "devDependencies": {

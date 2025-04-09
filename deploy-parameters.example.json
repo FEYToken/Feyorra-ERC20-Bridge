@@ -1,0 +1,15 @@
+{
+    "FeyorraBridgeModule": {
+        "isOriginalChain": true,
+        "feyorraTokenAddress": "0x0000000000000000000000000000000000000000",
+        "immediateOwner": "0x0000000000000000000000000000000000000000",
+        "timeLockedOwner": "0x0000000000000000000000000000000000000000",
+        "bridgeLimitBucketLimit": "10000000000000000000n",
+        "bridgeLimitBucketCapacity": "10000000000000000000000000n"
+    },
+    "TimelockOwnerModule": {
+        "minDelaySeconds": 86400,
+        "proposers": [],
+        "executors": []
+    }
+}
